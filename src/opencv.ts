@@ -1,9 +1,27 @@
 declare var cv: any;
 
+export namespace Colors {
+    export const BLACK: OpenCV.Scalar = [0,0,0,255];
+    export const RED: OpenCV.Scalar = [255,0,0,255];
+    export const GREEN: OpenCV.Scalar = [0,255,0,255];
+    export const BLUE: OpenCV.Scalar = [0,0,255,255];
+    export const YELLOW: OpenCV.Scalar = [255,255,0,255];
+    export const MAGENTA: OpenCV.Scalar = [255,0,255,255];
+    export const CYAN: OpenCV.Scalar = [0,255,255,255];
+    export const WHITE: OpenCV.Scalar = [255,255,255,255];
+
+    export function fromRGB(r: number, g: number, b: number): OpenCV.Scalar {
+        return [r,g,b,255];
+    }
+}
+
 export declare namespace OpenCV {
     export type MatType = number;
 
     export class Mat {
+        cols: number
+        rows: number
+
         data: {
             set: (data: Uint8ClampedArray) => void
         }
@@ -20,7 +38,56 @@ export declare namespace OpenCV {
 
         clone(): Mat;
         copyTo(dst: Mat): void;
-        convertTo(dst: Mat, rtype: number, alpha?: number, beta?: number): void
+        convertTo(dst: Mat, rtype: number, alpha?: number, beta?: number): void;
+        delete(): void;
+        isContinuous(): boolean
+        size(): Size
+        depth(): number
+        channels(): number
+        type(): any
+
+        col(col: number): Mat
+        row(row: number): Mat
+        colRange(start: number, end:number): Mat
+        rowRange(start: number, end:number): Mat
+
+        ucharAt(row: number, col: number): number
+        charAt(row: number, col: number): number
+        ushortAt(row: number, col: number): number
+        shortAt(row: number, col: number): number
+        intAt(row: number, col: number): number
+        floatAt(row: number, col: number): number
+        doubleAt(row: number, col: number): number
+
+        ucharPtr(row: number, col: number): Uint8Array
+        charPtr(row: number, col: number): Int8Array
+        ushortPtr(row: number, col: number): Uint16Array
+        shortPtr(row: number, col: number): Int16Array
+        intPtr(row: number, col: number): Int32Array
+        floatPtr(row: number, col: number): Float32Array
+        doublePtr(row: number, col: number): Float64Array
+    }
+
+    export class MatVector {
+        push_back(val: any): void
+        get(index: number): any
+        delete(): void
+        size(): number
+    }
+
+    export class DetectorParameters {
+
+    }
+
+    export class ArucoDictionary {
+        constructor(id: number)
+    }
+
+    export class CharucoBoard {
+        constructor(squaresX: number, squaresY: number, squareLength: number, markerLength: number, dictionary: OpenCV.ArucoDictionary)
+        draw(size: Size, dst: Mat): void
+        draw(size: Size, dst: Mat, marginSize: number): void
+        draw(size: Size, dst: Mat, marginSize: number, borderBits: number): void
     }
 
     export type Point = {
@@ -54,6 +121,12 @@ export declare namespace OpenCV {
 }
 
 export type OpenCV = {
+    Mat: typeof OpenCV.Mat,
+    MatVector: typeof OpenCV.MatVector
+    aruco_DetectorParameters: typeof OpenCV.DetectorParameters
+    aruco_Dictionary: typeof OpenCV.ArucoDictionary
+    aruco_CharucoBoard: typeof OpenCV.CharucoBoard
+
     // Constants
     CV_8U: OpenCV.MatType;
     CV_8UC1: OpenCV.MatType;
@@ -366,14 +439,68 @@ export type OpenCV = {
     FONT_HERSHEY_TRIPLEX: number
     FONT_ITALIC: number
 
+    DICT_4X4_100: number
+    DICT_4X4_1000: number
+    DICT_4X4_250: number
+    DICT_4X4_50: number
+    DICT_5X5_100: number
+    DICT_5X5_1000: number
+    DICT_5X5_250: number
+    DICT_5X5_50: number
+    DICT_6X6_100: number
+    DICT_6X6_1000: number
+    DICT_6X6_250: number
+    DICT_6X6_50: number
+    DICT_7X7_100: number
+    DICT_7X7_1000: number
+    DICT_7X7_250: number
+    DICT_7X7_50: number
+    DICT_APRILTAG_16h5: number
+    DICT_APRILTAG_25h9: number
+    DICT_APRILTAG_36h10: number
+    DICT_APRILTAG_36h11: number
+    DICT_ARUCO_ORIGINAL: number
+
     imshow: (canvas: string | HTMLCanvasElement, mat: OpenCV.Mat) => void
     cvtColor: (src: OpenCV.Mat, dst: OpenCV.Mat, format: number) => void
+
+    // Mat Operations
+    mean(src: OpenCV.Mat): OpenCV.Scalar
+
+    // ArUco
+    detectMarkers(img: OpenCV.Mat, dict: OpenCV.ArucoDictionary, detectedCorners: OpenCV.MatVector, detectedIds: OpenCV.Mat): void
+    drawDetectedMarkers(dst: OpenCV.Mat, detectedCorners: OpenCV.MatVector, detectedIds: OpenCV.Mat): void
+    calibrateCameraCharuco(charucoCorners: OpenCV.MatVector, charucoIds: OpenCV.MatVector, board: OpenCV.CharucoBoard, imgSize: OpenCV.Size, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat): void
+    estimatePoseCharucoBoard(charucoCorners: OpenCV.MatVector, charucoIds: OpenCV.MatVector, board: OpenCV.CharucoBoard, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvec: OpenCV.Mat, tvec: OpenCV.Mat): void
+    interpolateCornersCharuco(markerCorners: OpenCV.MatVector, markerIds: OpenCV.Mat, img: OpenCV.Mat, board: OpenCV.CharucoBoard, charucoCorners: OpenCV.Mat, charucoIds: OpenCV.Mat): void
+    interpolateCornersCharuco(markerCorners: OpenCV.MatVector, markerIds: OpenCV.Mat, img: OpenCV.Mat, board: OpenCV.CharucoBoard, charucoCorners: OpenCV.Mat, charucoIds: OpenCV.Mat, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat): void
+    interpolateCornersCharuco(markerCorners: OpenCV.MatVector, markerIds: OpenCV.Mat, img: OpenCV.Mat, board: OpenCV.CharucoBoard, charucoCorners: OpenCV.Mat, charucoIds: OpenCV.Mat, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, options: number): void
+    drawDetectedCornersCharuco(dst: OpenCV.Mat, corners: OpenCV.Mat): void;
+    drawDetectedCornersCharuco(dst: OpenCV.Mat, corners: OpenCV.Mat, cornerIds: OpenCV.Mat): void;
+    drawDetectedCornersCharuco(dst: OpenCV.Mat, corners: OpenCV.Mat, cornerIds: OpenCV.Mat, color: OpenCV.Scalar): void;
+    estimatePoseSingleMarkers(corners: OpenCV.MatVector, markerLength: number, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvecs: OpenCV.Mat, tvecs: OpenCV.Mat): void
+    drawFrameAxes(dst: OpenCV.Mat, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvecs: OpenCV.Mat, tvecs: OpenCV.Mat, axisLength: number): void
+
+    // Drawing
+    line(img: OpenCV.Mat, start: OpenCV.Point, end: OpenCV.Point, color: OpenCV.Scalar): void
+    line(img: OpenCV.Mat, start: OpenCV.Point, end: OpenCV.Point, color: OpenCV.Scalar, thickness: number): void
+    circle(img: OpenCV.Mat, center: OpenCV.Point, radius: number, color: OpenCV.Scalar): void
+    circle(img: OpenCV.Mat, center: OpenCV.Point, radius: number, color: OpenCV.Scalar, thickness: number): void
+    rectangle(img: OpenCV.Mat, start: OpenCV.Point, end: OpenCV.Point, color: OpenCV.Scalar): void
+    rectangle(img: OpenCV.Mat, start: OpenCV.Point, end: OpenCV.Point, color: OpenCV.Scalar, thickness: number): void
     putText: (mat: OpenCV.Mat, text: string, origin: OpenCV.Point, font: number, fontSize: number, color: OpenCV.Scalar, thickness: number, options: number) => void,
+
     [other: string | number | symbol]: any
 }
 
 export async function load_opencv(): Promise<OpenCV> {
     return await cv() as OpenCV;
+}
+
+export function forEachMatVector(mv: OpenCV.MatVector, fnc: (item: any)=>void) {
+    for (var size = 0; size < mv.size(); size++) {
+        fnc(mv.get(size))
+    }
 }
 
 type OpenCVFrameHandler = (cv: OpenCV, src: OpenCV.Mat, dst: OpenCV.Mat) => void
@@ -382,26 +509,56 @@ export class OpenCVRenderer {
     private video: HTMLVideoElement
     private outputCanvas: HTMLCanvasElement
     private rendering: boolean = false
-    private src: OpenCV.Mat
-    private dst: OpenCV.Mat
-    private width: number;
-    private height: number;
+    private src: OpenCV.Mat;
+    private dst: OpenCV.Mat;
+    private width: number = 0;
+    private height: number = 0;
+    private scale: number = 1;
+    private fps: number = 30;
     private handler: OpenCVFrameHandler | undefined = undefined
+    private nextRenderTime: number = 0;
 
-    constructor(cv: OpenCV, video: HTMLVideoElement, outputCanvas: HTMLCanvasElement, width: number, height: number) {
+    constructor(cv: OpenCV, video: HTMLVideoElement, outputCanvas: HTMLCanvasElement) {
         this.cv = cv;
         this.video = video;
         this.outputCanvas = outputCanvas;
-        this.width = width;
-        this.height = height;
-        this.src = new cv.Mat(height, width, cv.CV_8UC4)
-        this.dst = new cv.Mat(height, width, cv.CV_8UC4)
+        this.src = new cv.Mat();
+        this.dst = new cv.Mat();
     }
 
-    async requestCamera() {
-        let camera = await navigator.mediaDevices.getUserMedia({video: true, audio: false})
+    getCV(): OpenCV {
+        return this.cv
+    }
+
+    static async getAvailableCameras() {
+        // Get available devices
+        let devices = await navigator.mediaDevices.enumerateDevices()
+
+        // Filter for camera devices
+        let cameras = devices.filter(dev => dev.kind === "videoinput");
+
+        return cameras;
+    }
+
+    async requestCamera(deviceId?: string) {
+        // Attempt to get the camera.
+        let camera = await navigator.mediaDevices.getUserMedia(
+            {video: deviceId ? {deviceId: deviceId} : true, audio: false}
+        )
+        
+        // Get dimensions of the camera
+        let settings = camera.getVideoTracks()[0].getSettings();
+        this.width = settings.width!;
+        this.height = settings.height!;
+
+        // Create mats from camera
+        this.src = new this.cv.Mat(this.height, this.width, this.cv.CV_8UC4);
+        this.dst = new this.cv.Mat(this.height, this.width, this.cv.CV_8UC4);
+
+        console.log(`Using camera with dimensions ${this.width}x${this.height}`)
         this.video.srcObject = camera;
         this.video.play();
+        
     }
 
     start() {
@@ -415,30 +572,49 @@ export class OpenCVRenderer {
         this.rendering = false;
     }
 
+    size(): OpenCV.Size {
+        return {
+            width: this.width,
+            height: this.height
+        }
+    }
+
     onNewFrame(handler: OpenCVFrameHandler) {
         this.handler = handler;
+    }
+ 
+    setFPS(fps: number) {
+        this.fps = fps;
     }
 
     private render() {
         let context = this.outputCanvas.getContext("2d");
         if (!context) return;
 
-        // Draw the current video frame on the canvas
-        context.drawImage(this.video,0,0,this.width,this.height);
+        // Check if a frame can be rendered by seeing if we have exceeded the
+        // next render time, which is the last frame time plus the requested
+        // framerate.
+        let readyToRender = Date.now() >= this.nextRenderTime
+        if (readyToRender) {
+            // Draw the current video frame on the canvas
+            context.drawImage(this.video,0,0,this.width,this.height);
 
-        // Update the src Mat with the image data
-        let imageData = context.getImageData(0,0,this.width,this.height).data;
-        this.src.data.set(imageData);
+            // Update the src Mat with the image data
+            let imageData = context.getImageData(0,0,this.width,this.height).data;
+            this.src.data.set(imageData);
 
-        // process the image, if a handler exists.
-        if (this.handler)
-            this.handler(this.cv, this.src, this.dst)
-        
-        this.cv.imshow(this.outputCanvas, this.dst);
+            // process the image, if a handler exists.
+            if (this.handler)
+                this.handler(this.cv, this.src, this.dst)
+            
+            this.cv.imshow(this.outputCanvas, this.dst);
+            this.nextRenderTime = Date.now() + (1000/this.fps);
+        }
 
         // Queue a new frame if we're still rendering.
         if (this.rendering)
             requestAnimationFrame(() => this.render.bind(this)());
+            
     }
 
 }
