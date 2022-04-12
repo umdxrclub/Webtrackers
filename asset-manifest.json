@@ -1,10 +1,13 @@
 {
   "files": {
-    "main.js": "/Webtrackers/static/js/main.b98169c7.js",
+    "main.css": "/Webtrackers/static/css/main.39aaa44b.css",
+    "main.js": "/Webtrackers/static/js/main.f27658ef.js",
     "index.html": "/Webtrackers/index.html",
-    "main.b98169c7.js.map": "/Webtrackers/static/js/main.b98169c7.js.map"
+    "main.39aaa44b.css.map": "/Webtrackers/static/css/main.39aaa44b.css.map",
+    "main.f27658ef.js.map": "/Webtrackers/static/js/main.f27658ef.js.map"
   },
   "entrypoints": [
-    "static/js/main.b98169c7.js"
+    "static/css/main.39aaa44b.css",
+    "static/js/main.f27658ef.js"
   ]
 }
