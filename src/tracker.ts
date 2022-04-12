@@ -299,44 +299,6 @@ export class WebtrackCV {
      * @param dst Output image to be displayed on webpage
      */
     private onNewFrame(cv: OpenCV, src: OpenCV.Mat, dst: OpenCV.Mat) {
-        // Convert src image to gray-mat and to a RGB destination mat
-        cv.cvtColor(src, dst, cv.COLOR_RGBA2RGB)
-        cv.cvtColor(dst, this.gray, cv.COLOR_RGB2GRAY)
-
-        // Detect markers on gray image (doesn't matter if calibrated)
-        cv.detectMarkers(this.gray, this.dict, this.markerCorners, this.markerIds)
-
-        // Draw the markers on the output image
-        cv.drawDetectedMarkers(dst, this.markerCorners, this.markerIds)
-
-        if (!this.calibrated) {
-            // Camera is NOT calibrated, so find and draw Charuco calibration boards
-
-            // You MUST have some markers to work with in order to interpolate corners
-            // Otherwise, the interpolate function will cause the program to crash.
-            if (this.markerCorners.size() > 0) {
-                cv.interpolateCornersCharuco(this.markerCorners, this.markerIds, this.gray, this.calibrationBoard, this.charucoCorners, this.charucoIds);
-                if (this.charucoIds.rows > 0) {
-                    cv.drawDetectedCornersCharuco(dst, this.charucoCorners, this.charucoIds, Colors.MAGENTA);
-                    const boardAvg = cv.mean(this.charucoCorners)
-                    cv.circle(dst, {x:boardAvg[0],y:boardAvg[1]}, 10, Colors.YELLOW, 2)
-                }
-            }
-        } else {
-            // Draw detected markers if some are present within the image
-            if (this.markerCorners.size() > 0) {
-                cv.estimatePoseSingleMarkers(this.markerCorners, 12, this.cameraMatrix, this.distCoeffs, this.rvecs, this.tvecs)
-                
-                // Draw each marker detected
-                for (var i = 0; i < this.markerCorners.size(); i++)
-                    cv.drawFrameAxes(dst, this.cameraMatrix, this.distCoeffs, this.rvecs.row(i), this.tvecs.row(i), 12)
-
-                // Attempt to locate a board tracker, and if it is found, draw
-                // its position and orientation.
-                let result = cv.estimatePoseBoard(this.markerCorners, this.markerIds, this.tracker, this.cameraMatrix, this.distCoeffs, this.trackerRvec, this.trackerTvec)
-                if (result != 0)
-                    cv.drawFrameAxes(dst, this.cameraMatrix, this.distCoeffs, this.trackerRvec, this.trackerTvec, 0.1)
-            }
-        }
+        
     }
 }
