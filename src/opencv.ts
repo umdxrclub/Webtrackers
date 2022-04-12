@@ -34,7 +34,6 @@ export declare namespace OpenCV {
         static zeros(rows: number, cols: number, type: number): Mat;
         static ones(rows: number, cols: number, type: number): Mat;
         static eye(rows: number, cols: number, type: number): Mat;
-        static matFromImageData(data: Uint8ClampedArray): Mat;
 
         clone(): Mat;
         copyTo(dst: Mat): void;
@@ -69,8 +68,8 @@ export declare namespace OpenCV {
     }
 
     export class MatVector {
-        push_back(val: any): void
-        get(index: number): any
+        push_back(mat: Mat): void
+        get(index: number): Mat
         delete(): void
         size(): number
     }
@@ -81,6 +80,10 @@ export declare namespace OpenCV {
 
     export class ArucoDictionary {
         constructor(id: number)
+    }
+
+    export class ArucoBoard {
+        constructor(corners: MatVector, dictionary: ArucoDictionary, ids: Mat)
     }
 
     export class CharucoBoard {
@@ -126,6 +129,7 @@ export type OpenCV = {
     aruco_DetectorParameters: typeof OpenCV.DetectorParameters
     aruco_Dictionary: typeof OpenCV.ArucoDictionary
     aruco_CharucoBoard: typeof OpenCV.CharucoBoard
+    aruco_Board: typeof OpenCV.ArucoBoard
 
     // Constants
     CV_8U: OpenCV.MatType;
@@ -466,6 +470,8 @@ export type OpenCV = {
 
     // Mat Operations
     mean(src: OpenCV.Mat): OpenCV.Scalar
+    matFromImageData(data: Uint8ClampedArray): OpenCV.Mat;
+    matFromArray(rows: number, cols: number, type: OpenCV.MatType, array: number[]): OpenCV.Mat
 
     // ArUco
     detectMarkers(img: OpenCV.Mat, dict: OpenCV.ArucoDictionary, detectedCorners: OpenCV.MatVector, detectedIds: OpenCV.Mat): void
@@ -479,7 +485,8 @@ export type OpenCV = {
     drawDetectedCornersCharuco(dst: OpenCV.Mat, corners: OpenCV.Mat, cornerIds: OpenCV.Mat): void;
     drawDetectedCornersCharuco(dst: OpenCV.Mat, corners: OpenCV.Mat, cornerIds: OpenCV.Mat, color: OpenCV.Scalar): void;
     estimatePoseSingleMarkers(corners: OpenCV.MatVector, markerLength: number, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvecs: OpenCV.Mat, tvecs: OpenCV.Mat): void
-    drawFrameAxes(dst: OpenCV.Mat, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvecs: OpenCV.Mat, tvecs: OpenCV.Mat, axisLength: number): void
+    estimatePoseBoard(corners: OpenCV.MatVector, ids: OpenCV.Mat, board: OpenCV.ArucoBoard, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvec: OpenCV.Mat, tvec: OpenCV.Mat): number
+    drawFrameAxes(dst: OpenCV.Mat, cameraMatrix: OpenCV.Mat, distCoeffs: OpenCV.Mat, rvec: OpenCV.Mat, tvec: OpenCV.Mat, axisLength: number): void
 
     // Drawing
     line(img: OpenCV.Mat, start: OpenCV.Point, end: OpenCV.Point, color: OpenCV.Scalar): void
@@ -508,7 +515,6 @@ export class OpenCVRenderer {
     private cv: OpenCV
     private video: HTMLVideoElement
     private outputCanvas: HTMLCanvasElement
-    private rendering: boolean = false
     private src: OpenCV.Mat;
     private dst: OpenCV.Mat;
     private width: number = 0;
@@ -517,6 +523,7 @@ export class OpenCVRenderer {
     private fps: number = 30;
     private handler: OpenCVFrameHandler | undefined = undefined
     private nextRenderTime: number = 0;
+    private frame: number = -1
 
     constructor(cv: OpenCV, video: HTMLVideoElement, outputCanvas: HTMLCanvasElement) {
         this.cv = cv;
@@ -541,6 +548,14 @@ export class OpenCVRenderer {
     }
 
     async requestCamera(deviceId?: string) {
+        if (this.video.srcObject instanceof MediaStream) {
+            let camera = this.video.srcObject as MediaStream
+            console.log("Stopping prev camera...")
+            camera.getTracks().forEach(track => {
+                track.stop()
+            })
+        }
+
         // Attempt to get the camera.
         let camera = await navigator.mediaDevices.getUserMedia(
             {video: deviceId ? {deviceId: deviceId} : true, audio: false}
@@ -558,18 +573,16 @@ export class OpenCVRenderer {
         console.log(`Using camera with dimensions ${this.width}x${this.height}`)
         this.video.srcObject = camera;
         this.video.play();
-        
     }
 
     start() {
-        if (!this.rendering) {
-            this.rendering = true;
+        if (this.frame == -1)
             this.render();
-        }
      }
 
     stop() {
-        this.rendering = false;
+        cancelAnimationFrame(this.frame)
+        this.frame = -1
     }
 
     size(): OpenCV.Size {
@@ -588,20 +601,24 @@ export class OpenCVRenderer {
     }
 
     private render() {
-        let context = this.outputCanvas.getContext("2d");
-        if (!context) return;
-
         // Check if a frame can be rendered by seeing if we have exceeded the
         // next render time, which is the last frame time plus the requested
         // framerate.
-        let readyToRender = Date.now() >= this.nextRenderTime
+        let readyToRender = Date.now() >= this.nextRenderTime && this.video != null && this.outputCanvas != null
         if (readyToRender) {
+            let context = this.outputCanvas.getContext("2d");
+            if (!context) return;
+
             // Draw the current video frame on the canvas
             context.drawImage(this.video,0,0,this.width,this.height);
 
             // Update the src Mat with the image data
-            let imageData = context.getImageData(0,0,this.width,this.height).data;
-            this.src.data.set(imageData);
+            try {
+                let imageData = context.getImageData(0,0,this.width,this.height).data;
+                this.src.data.set(imageData);
+            } catch {
+                console.warn("can't get image data!")
+            }
 
             // process the image, if a handler exists.
             if (this.handler)
@@ -611,10 +628,9 @@ export class OpenCVRenderer {
             this.nextRenderTime = Date.now() + (1000/this.fps);
         }
 
-        // Queue a new frame if we're still rendering.
-        if (this.rendering)
-            requestAnimationFrame(() => this.render.bind(this)());
-            
+        // Queue a new animation frame
+        this.frame = requestAnimationFrame(() => this.render.bind(this)());
+    
     }
 
 }
