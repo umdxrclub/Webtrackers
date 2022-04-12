@@ -303,8 +303,6 @@ export class WebtrackCV {
         cv.cvtColor(src, dst, cv.COLOR_RGBA2RGB)
         cv.cvtColor(dst, this.gray, cv.COLOR_RGB2GRAY)
 
-        // cv.circle(dst, {x: dst.cols/2, y: dst.rows/2}, 5, Colors.GREEN, 10)
-
         // Detect markers on gray image (doesn't matter if calibrated)
         cv.detectMarkers(this.gray, this.dict, this.markerCorners, this.markerIds)
 

@@ -2,6 +2,7 @@ import { Container } from '@mui/material';
 import React, { useEffect } from 'react';
 import { load_opencv } from './opencv';
 import { Webtrack } from './webtrack';
+import "./App.css"
 
 function App() {
   useEffect(() => {

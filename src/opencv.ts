@@ -567,8 +567,7 @@ export class OpenCVRenderer {
         this.height = settings.height!;
 
         // Create mats from camera
-        this.src = new this.cv.Mat(this.height, this.width, this.cv.CV_8UC4);
-        this.dst = new this.cv.Mat(this.height, this.width, this.cv.CV_8UC4);
+        this.createSrcDstMats(this.width, this.height)
 
         console.log(`Using camera with dimensions ${this.width}x${this.height}`)
         this.video.srcObject = camera;
@@ -600,6 +599,22 @@ export class OpenCVRenderer {
         this.fps = fps;
     }
 
+    getScale() {
+        return this.scale
+    }
+
+    setScale(scale: number) {
+        if (scale > 0 && scale <= 1) {
+            this.scale = scale
+        }
+    }
+
+    private createSrcDstMats(width: number, height: number) {
+        // Create mats from camera
+        this.src = new this.cv.Mat(height, width, this.cv.CV_8UC4);
+        this.dst = new this.cv.Mat(height, width, this.cv.CV_8UC4);
+    }
+
     private render() {
         // Check if a frame can be rendered by seeing if we have exceeded the
         // next render time, which is the last frame time plus the requested
@@ -609,14 +624,25 @@ export class OpenCVRenderer {
             let context = this.outputCanvas.getContext("2d");
             if (!context) return;
 
+            let scaledWidth = Math.floor(this.width * this.scale)
+            let scaledHeight = Math.floor(this.height * this.scale)
+
             // Draw the current video frame on the canvas
-            context.drawImage(this.video,0,0,this.width,this.height);
+            context.drawImage(this.video,0,0,scaledWidth,scaledHeight);
 
             // Update the src Mat with the image data
             try {
-                let imageData = context.getImageData(0,0,this.width,this.height).data;
+                let imageData = context.getImageData(0,0,scaledWidth,scaledHeight).data;
+
+                // Resize Mats if necessary
+                if (this.src.cols != scaledWidth) {
+                    this.src.delete()
+                    this.dst.delete()
+                    console.log(scaledWidth, scaledHeight)
+                    this.createSrcDstMats(scaledWidth, scaledHeight)
+                }
                 this.src.data.set(imageData);
-            } catch {
+            } catch (e) {
                 console.warn("can't get image data!")
             }
 

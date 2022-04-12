@@ -1,4 +1,5 @@
-import { Box, Button, Paper, Switch, Typography } from "@mui/material";
+import { Box, Button, Container, Paper, Slider, Stack, Switch, Typography } from "@mui/material";
+import { render } from "@testing-library/react";
 import { createRef, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CameraSelectorDialog } from "./CameraSelector";
 import { load_opencv, OpenCV, OpenCVRenderer } from "./opencv";
@@ -14,6 +15,7 @@ export const Webtrack: React.FC = ({}) => {
     const webtrackCv = useRef<WebtrackCV>();
     
     // State
+    const [ scale, setScale ] = useState(100)
     const [ cameraDeviceId, setCameraDeviceId ] = useState<string | undefined>();
     const [ cameraSelectorOpen, setCameraSelectorOpen ] = useState(false);
     const [ capturedBoardPoses, setCapturedBoardPoses ] = useState(0)
@@ -24,6 +26,17 @@ export const Webtrack: React.FC = ({}) => {
         cameraMatrix: undefined,
         distCoeffs: undefined
     })
+
+    function activateCamera(cameraDeviceId: string) {
+        if (renderer.current) {
+            renderer.current.requestCamera(cameraDeviceId).then(() => {
+                setSettings(prev => { return {...prev, capturing: true }})
+            }).catch((e) => {
+                console.error(e)
+                alert("That camera could not be started!")
+            });
+        }
+    }
 
     // Update the renderer's capture state once the "capturing" state variable
     // changes its value.
@@ -36,14 +49,8 @@ export const Webtrack: React.FC = ({}) => {
 
     // Update the renderer's camera when a new camera device id is selected
     useEffect(() => {
-        if (cameraDeviceId && renderer.current) {
-            renderer.current.requestCamera(cameraDeviceId).then(() => {
-                setSettings(prev => { return {...prev, capturing: true }})
-            }).catch((e) => {
-                console.error(e)
-                alert("That camera could not be started!")
-            });
-        }
+        if (cameraDeviceId)
+            activateCamera(cameraDeviceId)
     }, [cameraDeviceId])
 
     // Update settings when necessary
@@ -51,6 +58,12 @@ export const Webtrack: React.FC = ({}) => {
         if (webtrackCv.current)
             webtrackCv.current.applySettings(settings)
     }, [settings])
+
+    // Change scale
+    useEffect(() => {
+        if (renderer.current)
+            renderer.current.setScale(scale/100)
+    }, [scale])
 
     // Upon loading the Webtrack component, 
     useLayoutEffect(() => {
@@ -64,8 +77,10 @@ export const Webtrack: React.FC = ({}) => {
 
             // Create an OpenCV renderer
             cvRenderer = new OpenCVRenderer(loadedCv, vid, outputCanvas)
+            cvRenderer.setScale(scale)
             renderer.current = cvRenderer;
             webtrackCv.current = new WebtrackCV(cvRenderer, settings)
+            
             webtrackCv.current.onNewCameraCalibration((cam, dist) => {
                 setSettings(prev => { return {
                     ...prev,
@@ -76,14 +91,19 @@ export const Webtrack: React.FC = ({}) => {
 
             webtrackCv.current.onNewBoardPoseCountHandler(count => setCapturedBoardPoses(count))
 
-            // Load first camera available
-            OpenCVRenderer.getAvailableCameras().then(cameras => {
-                if (cameras.length > 0) {
-                    setCameraDeviceId(cameras[0].deviceId);
-                } else {
-                    alert("No webcam devices found!");
-                }
-            })
+            if (cameraDeviceId) {
+                // Camera already exists, activate it
+                activateCamera(cameraDeviceId)
+            } else {
+                // Find and load first camera available
+                OpenCVRenderer.getAvailableCameras().then(cameras => {
+                    if (cameras.length > 0) {
+                        setCameraDeviceId(cameras[0].deviceId);
+                    } else {
+                        alert("No webcam devices found!");
+                    }
+                })
+            }
 
             setCapturedBoardPoses(0)
         });
@@ -91,11 +111,10 @@ export const Webtrack: React.FC = ({}) => {
         return () => {
             cvRenderer.stop()
             renderer.current = undefined
-            setCameraDeviceId(undefined)
         }
     }, []);
 
-    return <Paper sx={{flexDirection: "vertical", justifyContent: "center"}}>
+    return <Paper sx={{flexDirection: "vertical", justifyContent: "center", marginTop: 4}}>
         <CameraSelectorDialog
             open={cameraSelectorOpen}
             cameraDeviceId={cameraDeviceId}
@@ -103,16 +122,23 @@ export const Webtrack: React.FC = ({}) => {
             onClose={() => setCameraSelectorOpen(false)}
         />
 
+        <Container sx={{textAlign: "center", paddingTop: 2, paddingBottom: 2}}>
+            <Typography variant="h2">Webtrackers</Typography>
+            <Typography>Developed by the UMD XR Club. It probably works!</Typography>
+        </Container>
+        <Stack sx={{paddingLeft: 8, paddingRight: 8, paddingBottom: 2}} justifyContent="center" alignItems="center">
+            <Switch checked={settings.capturing} onChange={event => setSettings(prev => { return {...prev, capturing: event.target.checked}})} />
+            <Button onClick={() => setCameraSelectorOpen(true)}>Select Camera</Button>
+            <Button disabled={settings.cameraMatrix != undefined} onClick={() => webtrackCv.current?.captureCalibrationBoard()}>Capture Board Pose</Button>
+            <Button disabled={settings.cameraMatrix != undefined || capturedBoardPoses < 10} onClick={() => webtrackCv.current?.calibrate()}>Calibrate Board</Button>
+            <Slider aria-label="Image Scale" value={scale} min={1} max={100} defaultValue={100} onChange={(e,v) => setScale(v as number)} />
+            <Typography>Calibrated: {settings.cameraMatrix != undefined ? "Yes" : `No (${capturedBoardPoses}/10)`}</Typography>
+        </Stack>
+
         { /* Hidden video player to get camera stream */ }
         <video ref={video} hidden />
-        <Box display="flex" justifyContent="center" alignItems="center">
-            <canvas ref={canvas} />
+        <Box display="flex" justifyContent="center" alignItems="center"> 
+            <canvas ref={canvas} style={{marginBottom:8}}/>
         </Box>
-        
-        <Switch checked={settings.capturing} onChange={event => setSettings(prev => { return {...prev, capturing: event.target.checked}})} />
-        <Button onClick={() => setCameraSelectorOpen(true)}>Select Camera</Button>
-        <Button disabled={settings.cameraMatrix != undefined} onClick={() => webtrackCv.current?.captureCalibrationBoard()}>Capture Board Pose</Button>
-        <Button disabled={settings.cameraMatrix != undefined || capturedBoardPoses < 10} onClick={() => webtrackCv.current?.calibrate()}>Calibrate Board</Button>
-        <Typography>Calibrated: {settings.cameraMatrix != undefined ? "Yes" : `No (${capturedBoardPoses}/10)`}</Typography>
     </Paper>
 }
