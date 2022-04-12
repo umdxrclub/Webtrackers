@@ -1,10 +1,10 @@
 {
   "files": {
-    "main.js": "/Webtrackers/static/js/main.76e60cff.js",
+    "main.js": "/Webtrackers/static/js/main.b98169c7.js",
     "index.html": "/Webtrackers/index.html",
-    "main.76e60cff.js.map": "/Webtrackers/static/js/main.76e60cff.js.map"
+    "main.b98169c7.js.map": "/Webtrackers/static/js/main.b98169c7.js.map"
   },
   "entrypoints": [
-    "static/js/main.76e60cff.js"
+    "static/js/main.b98169c7.js"
   ]
 }
